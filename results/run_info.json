@@ -1,0 +1,17 @@
+{
+  "data_start": "2013-01",
+  "data_end": "2025-01",
+  "test_targets": "2021-01 to 2025-01",
+  "n_test_per_horizon": 49,
+  "sarima_order": [
+    0,
+    1,
+    1
+  ],
+  "sarima_seasonal_order": [
+    0,
+    1,
+    1,
+    12
+  ]
+}
