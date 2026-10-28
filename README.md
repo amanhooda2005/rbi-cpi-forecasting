@@ -71,6 +71,18 @@ Accuracy is measured by RMSE and MAE. Differences from the benchmark are tested 
 
 Full results: [`results/metrics.csv`](results/metrics.csv), [`results/rmse_by_period.csv`](results/rmse_by_period.csv), every forecast in [`results/forecasts.csv`](results/forecasts.csv).
 
+### Independent replication in R
+
+[`R/sarima_backtest.R`](R/sarima_backtest.R) re-runs the SARIMA backtest in base R (`stats::arima`, exact maximum likelihood) as a check on the Python results:
+
+| Horizon | Random walk RMSE | SARIMA RMSE (R) | SARIMA RMSE (Python) | Relative RMSE (R) | DM p-value (R) |
+|---|---|---|---|---|---|
+| 1 month | 0.84 | 0.58 | 0.57 | 0.68 | 0.002 |
+| 3 months | 1.38 | 1.03 | 1.04 | 0.75 | 0.013 |
+| 6 months | 1.40 | 1.02 | 1.04 | 0.73 | 0.030 |
+
+The small differences come from the two libraries' estimation methods; the conclusion is the same.
+
 ## Findings
 
 1. **SARIMA wins at every horizon**, and the improvement over the benchmark is statistically significant (p < 0.02).
@@ -92,6 +104,7 @@ Full results: [`results/metrics.csv`](results/metrics.csv), [`results/rmse_by_pe
 pip install -r requirements.txt
 python src/run.py          # data -> backtest -> results/ and figures/ (about 3 minutes)
 python -m pytest tests     # checks that no model sees future data, and data matches MOSPI
+Rscript R/sarima_backtest.R   # optional: SARIMA replication in base R (needs results from run.py)
 ```
 
 Or open [`notebooks/cpi_inflation_forecasting.ipynb`](notebooks/cpi_inflation_forecasting.ipynb) for the full walkthrough with outputs.
@@ -103,6 +116,7 @@ src/data.py          Loading, inflation calculation, validation against MOSPI
 src/models.py        Random walk, SARIMA, Ridge, Random Forest, Gradient Boosting
 src/evaluate.py      Expanding-window backtest, RMSE/MAE, Diebold-Mariano test
 src/run.py           Runs everything and writes results and figures
+R/sarima_backtest.R  SARIMA backtest replicated in base R
 tests/               Look-ahead and data-consistency tests
 notebooks/           Executed analysis notebook
 ```
