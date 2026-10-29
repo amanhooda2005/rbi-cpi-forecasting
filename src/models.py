@@ -70,9 +70,16 @@ class Sarima:
 
 
 # ---------------------------------------------------------------- ML (direct)
-def make_features(panel: pd.DataFrame) -> pd.DataFrame:
-    """Predictors observed at each month t."""
+SURVEY_COLS = ["iesh_exp_current", "iesh_exp_3m", "iesh_exp_1y", "iesh_d_exp_1y", "iesh_d_exp_3m"]
+
+
+def make_features(panel: pd.DataFrame, survey: bool = False) -> pd.DataFrame:
+    """Predictors observed at each month t. With survey=True, adds RBI household inflation
+    expectations as known at t (see survey.py for the publication lag)."""
     f = pd.DataFrame(index=panel.index)
+    if survey:
+        for c in SURVEY_COLS:
+            f[c] = panel[c]
     for lag in range(0, 12):
         f[f"infl_lag{lag}"] = panel["infl_general"].shift(lag)
     for lag in range(0, 3):
@@ -85,9 +92,9 @@ def make_features(panel: pd.DataFrame) -> pd.DataFrame:
     return f
 
 
-def _direct_xy(panel: pd.DataFrame, h: int):
+def _direct_xy(panel: pd.DataFrame, h: int, survey: bool = False):
     """Train on (features at t) -> (inflation at t+h), plus target-month seasonality."""
-    X = make_features(panel)
+    X = make_features(panel, survey=survey)
     target_month = (panel.index + pd.DateOffset(months=h)).month
     for m in range(2, 13):
         X[f"tmonth_{m}"] = (target_month == m).astype(float)
@@ -99,8 +106,8 @@ def _direct_xy(panel: pd.DataFrame, h: int):
 class DirectML:
     """Direct multi-step regression: a separate model per horizon, refit at every origin."""
 
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self, name: str, survey: bool = False):
+        self.name, self.survey = name, survey
 
     def _model(self):
         if self.name == "Ridge":
@@ -114,7 +121,7 @@ class DirectML:
         raise ValueError(self.name)
 
     def __call__(self, panel: pd.DataFrame, h: int) -> float:
-        X, y, x_now = _direct_xy(panel, h)
+        X, y, x_now = _direct_xy(panel, h, survey=self.survey)
         model = self._model().fit(X, y)
         self.last_model_, self.feature_names_ = model, list(X.columns)
         return float(model.predict(x_now)[0])

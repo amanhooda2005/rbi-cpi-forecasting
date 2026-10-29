@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from data import PROCESSED, ROOT, build_panel
-from evaluate import HORIZONS, run_backtest, score, score_by_period
+from evaluate import HORIZONS, run_backtest, score, score_by_period, score_survey
 
 RES, FIG = ROOT / "results", ROOT / "figures"
 COLORS = {"Actual": "#1a1a1a", "Random walk": "#9aa0a6", "SARIMA": "#1f5fbf",
@@ -47,7 +47,7 @@ def fig_forecasts(fc):
 
 
 def fig_relative_rmse(scores):
-    s = scores[scores["model"] != "Random walk"]
+    s = scores[(scores["model"] != "Random walk") & ~scores["model"].str.endswith("+ survey")]
     models = list(dict.fromkeys(s["model"]))
     fig, ax = plt.subplots(figsize=(9, 4))
     w = 0.8 / len(models)
@@ -75,12 +75,36 @@ def fig_importance(rf):
     fig.tight_layout(); fig.savefig(FIG / "04_rf_feature_importance.png"); plt.close(fig)
 
 
+def fig_survey(survey_scores, panel):
+    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4), gridspec_kw={"width_ratios": [1.15, 1]})
+    p = panel.loc["2014":]
+    ax = axes[0]
+    ax.plot(p.index, p["iesh_exp_1y"], color="#a142f4", lw=1.6, label="Households: 1-year-ahead expectation (median)")
+    ax.plot(p.index, p["iesh_exp_3m"], color="#a142f4", lw=1, ls="--", label="Households: 3-month-ahead expectation")
+    ax.plot(p.index, p["infl_general"], color="#1a1a1a", lw=1.6, label="Actual CPI inflation")
+    ax.set(title="Household expectations vs actual inflation (%)", ylabel="%")
+    ax.legend(frameon=False, fontsize=8)
+    ax = axes[1]
+    models = [m for m in dict.fromkeys(survey_scores["model"])]
+    w = 0.8 / len(models)
+    for i, m in enumerate(models):
+        v = survey_scores[survey_scores["model"] == m].set_index("horizon").loc[list(HORIZONS), "change (%)"]
+        ax.bar([x + i * w for x in range(len(HORIZONS))], v, width=w, color=COLORS[m], label=m)
+    ax.axhline(0, color="black", lw=1)
+    ax.set_xticks([x + w * (len(models) - 1) / 2 for x in range(len(HORIZONS))],
+                  [f"{h}-month ahead" for h in HORIZONS])
+    ax.set(ylabel="Change in RMSE (%)", title="Effect of adding the survey (below 0 = better)")
+    ax.legend(frameon=False, fontsize=8)
+    fig.tight_layout(); fig.savefig(FIG / "05_household_expectations.png"); plt.close(fig)
+
+
 def main():
     RES.mkdir(exist_ok=True); FIG.mkdir(exist_ok=True); PROCESSED.parent.mkdir(parents=True, exist_ok=True)
     panel = build_panel()
     panel.to_csv(PROCESSED, float_format="%.4f")
     fc, info = run_backtest(panel)
-    scores, by_period = score(fc), score_by_period(fc)
+    scores, by_period, survey_scores = score(fc), score_by_period(fc), score_survey(fc)
+    survey_scores.to_csv(RES / "survey_ablation.csv", index=False, float_format="%.4f")
     fc.to_csv(RES / "forecasts.csv", index=False, float_format="%.4f")
     scores.to_csv(RES / "metrics.csv", index=False, float_format="%.4f")
     by_period.to_csv(RES / "rmse_by_period.csv", float_format="%.4f")
@@ -90,8 +114,10 @@ def main():
             "sarima_order": info["sarima_order"], "sarima_seasonal_order": info["sarima_seasonal_order"]}
     (RES / "run_info.json").write_text(json.dumps(meta, indent=2, default=str))
     fig_history(panel); fig_forecasts(fc); fig_relative_rmse(scores); fig_importance(info["rf_model"])
+    fig_survey(survey_scores, info["panel"])
     print(json.dumps(meta, indent=2, default=str))
     print(scores.round(3).to_string(index=False))
+    print(survey_scores.round(3).to_string(index=False))
 
 
 if __name__ == "__main__":

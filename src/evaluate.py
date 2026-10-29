@@ -5,6 +5,7 @@ from scipy import stats
 
 from data import build_panel
 from models import DirectML, Sarima, random_walk, select_sarima_order
+from survey import monthly_known
 
 HORIZONS = (1, 3, 6)
 TEST_START, TEST_END = "2021-01-01", None          # targets from Jan 2021 to the last month
@@ -14,6 +15,7 @@ PERIODS = {"2021-22 (inflation surge)": ("2021-01-01", "2022-12-01"),
 
 
 def run_backtest(panel: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    panel = panel.join(monthly_known(panel.index))      # survey values as publicly known each month
     order, seasonal = select_sarima_order(np.log(panel.loc[:SARIMA_SELECTION_END, "cpi_general"]))
     models = {
         "Random walk": random_walk,
@@ -21,6 +23,10 @@ def run_backtest(panel: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         "Ridge": DirectML("Ridge"),
         "Random Forest": DirectML("Random Forest"),
         "Gradient Boosting": DirectML("Gradient Boosting"),
+        # Same models plus RBI household inflation expectations (survey ablation).
+        "Ridge + survey": DirectML("Ridge", survey=True),
+        "Random Forest + survey": DirectML("Random Forest", survey=True),
+        "Gradient Boosting + survey": DirectML("Gradient Boosting", survey=True),
     }
     targets = panel.loc[TEST_START:TEST_END].index
     rows = []
@@ -37,7 +43,7 @@ def run_backtest(panel: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     # Pre-specified forecast combination: equal-weight mean of the four non-naive models.
     fc["Average of models"] = fc[["SARIMA", "Ridge", "Random Forest", "Gradient Boosting"]].mean(axis=1)
     info = {"sarima_order": order, "sarima_seasonal_order": seasonal,
-            "rf_model": models["Random Forest"]}
+            "rf_model": models["Random Forest"], "panel": panel}
     return fc, info
 
 
@@ -76,6 +82,23 @@ def score(fc: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
+SURVEY_PAIRS = [("Ridge", "Ridge + survey"), ("Random Forest", "Random Forest + survey"),
+                ("Gradient Boosting", "Gradient Boosting + survey")]
+
+
+def score_survey(fc: pd.DataFrame) -> pd.DataFrame:
+    """Does adding household inflation expectations improve each ML model?"""
+    out = []
+    for h, g in fc.groupby("horizon"):
+        for base, plus in SURVEY_PAIRS:
+            e0, e1 = (g[base] - g["actual"]).to_numpy(), (g[plus] - g["actual"]).to_numpy()
+            r0, r1 = np.sqrt(np.mean(e0 ** 2)), np.sqrt(np.mean(e1 ** 2))
+            out.append({"horizon": h, "model": base, "RMSE without survey": r0,
+                        "RMSE with survey": r1, "change (%)": 100 * (r1 / r0 - 1),
+                        "DM p-value (with vs without)": dm_test(e1, e0, h)})
+    return pd.DataFrame(out)
+
+
 def score_by_period(fc: pd.DataFrame) -> pd.DataFrame:
     out = []
     for label, (a, b) in PERIODS.items():
@@ -93,3 +116,4 @@ if __name__ == "__main__":
     print(info["sarima_order"], info["sarima_seasonal_order"])
     print(score(fc).round(3).to_string())
     print(score_by_period(fc).round(3))
+    print(score_survey(fc).round(3).to_string())

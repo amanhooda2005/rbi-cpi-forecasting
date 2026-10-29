@@ -1,0 +1,10 @@
+horizon,model,RMSE without survey,RMSE with survey,change (%),DM p-value (with vs without)
+1,Ridge,0.9520,0.8984,-5.6249,0.0083
+1,Random Forest,0.8974,0.8759,-2.3904,0.0067
+1,Gradient Boosting,0.8986,0.8408,-6.4285,0.0198
+3,Ridge,1.5505,1.4639,-5.5827,0.5225
+3,Random Forest,1.4010,1.3479,-3.7909,0.1701
+3,Gradient Boosting,1.5638,1.4667,-6.2091,0.2110
+6,Ridge,2.0789,1.7345,-16.5658,0.3330
+6,Random Forest,1.6485,1.4752,-10.5127,0.2154
+6,Gradient Boosting,1.8689,1.5965,-14.5777,0.0910

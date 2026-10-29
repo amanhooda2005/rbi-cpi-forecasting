@@ -4,16 +4,25 @@ horizon,model,n,RMSE,MAE,relative RMSE vs random walk,DM p-value vs random walk
 1,Ridge,49,0.9520,0.7424,1.1297,0.0966
 1,Random Forest,49,0.8974,0.7234,1.0650,0.3929
 1,Gradient Boosting,49,0.8986,0.6670,1.0663,0.4004
+1,Ridge + survey,49,0.8984,0.6728,1.0662,0.4009
+1,Random Forest + survey,49,0.8759,0.6934,1.0395,0.5763
+1,Gradient Boosting + survey,49,0.8408,0.6194,0.9978,0.9751
 1,Average of models,49,0.7611,0.5727,0.9032,0.1362
 3,Random walk,49,1.3790,1.1035,1.0000,
 3,SARIMA,49,1.0363,0.7956,0.7515,0.0112
 3,Ridge,49,1.5505,1.3330,1.1244,0.4600
 3,Random Forest,49,1.4010,1.1697,1.0160,0.9301
 3,Gradient Boosting,49,1.5638,1.3217,1.1340,0.5154
+3,Ridge + survey,49,1.4639,1.2534,1.0616,0.7259
+3,Random Forest + survey,49,1.3479,1.1294,0.9774,0.8969
+3,Gradient Boosting + survey,49,1.4667,1.2445,1.0636,0.7210
 3,Average of models,49,1.2531,1.0640,0.9087,0.5385
 6,Random walk,49,1.3983,1.1515,1.0000,
 6,SARIMA,49,1.0357,0.7765,0.7407,0.0159
 6,Ridge,49,2.0789,1.6763,1.4868,0.1438
 6,Random Forest,49,1.6485,1.3355,1.1790,0.4753
 6,Gradient Boosting,49,1.8689,1.4955,1.3366,0.2986
+6,Ridge + survey,49,1.7345,1.2805,1.2405,0.4064
+6,Random Forest + survey,49,1.4752,1.1969,1.0550,0.7482
+6,Gradient Boosting + survey,49,1.5965,1.2610,1.1418,0.5671
 6,Average of models,49,1.4989,1.2105,1.0720,0.7597
